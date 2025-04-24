@@ -51,7 +51,17 @@ jobs:
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > id_rsa
         chmod 600 id_rsa
 
+        cd terraform
         DROPLET_IP=$(terraform output -raw droplet_ip)
+        cd ..
 
-        ssh -o StrictHostKeyChecking=no -i id_rsa root@$DROPLET_IP 'bash -s' < ../scripts/harden.sh
-      working-directory: terraform
+        if [ -z "$DROPLET_IP" ]; then
+          echo "ERROR: Droplet IP is empty. Cannot SSH."
+          exit 1
+        fi
+
+        echo "Droplet IP: $DROPLET_IP"
+
+        sleep 10  # Optional: allow time for droplet to fully initialize
+
+        ssh -o StrictHostKeyChecking=no -i id_rsa root@$DROPLET_IP 'bash -s' < scripts/harden.sh
