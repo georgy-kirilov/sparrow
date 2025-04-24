@@ -42,27 +42,23 @@ jobs:
           -var="image=${{ github.event.inputs.image }}"
       working-directory: terraform
 
-    - name: Show Droplet IP
-      run: terraform output -raw droplet_ip
-      working-directory: terraform
+    - name: Capture Droplet IP
+      id: droplet_ip
+      run: |
+        cd terraform
+        DROPLET_IP=$(which terraform | xargs -I {} {} output -raw droplet_ip)
+        echo "ip=$DROPLET_IP" >> $GITHUB_OUTPUT
 
-    - name: Harden droplet via SSH
+    - name: Harden Droplet via SSH
       run: |
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > id_rsa
         chmod 600 id_rsa
 
-        TERRAFORM_BIN="/usr/local/bin/terraform"
-
-        echo "Using Terraform binary: $TERRAFORM_BIN"
-
-        cd terraform
-        DROPLET_IP=$($TERRAFORM_BIN output -raw droplet_ip)
-        cd ..
-
-        echo "Droplet IP: $DROPLET_IP"
+        DROPLET_IP="${{ steps.droplet_ip.outputs.ip }}"
+        echo "✅ Using Droplet IP: $DROPLET_IP"
 
         if [ -z "$DROPLET_IP" ]; then
-          echo "ERROR: Droplet IP is empty"
+          echo "❌ ERROR: IP is empty"
           exit 1
         fi
 
