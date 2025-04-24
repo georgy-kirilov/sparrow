@@ -46,8 +46,8 @@ jobs:
       id: droplet_ip
       working-directory: terraform
       run: |
-        DROPLET_IP=$($TERRAFORM_CLI_PATH output -raw droplet_ip)
-        echo "ip=$DROPLET_IP" >> $GITHUB_OUTPUT
+        ip=$(terraform output -raw droplet_ip)
+        echo "ip=$ip" >> $GITHUB_OUTPUT
 
     # - name: Harden Droplet via SSH
     #   run: |
