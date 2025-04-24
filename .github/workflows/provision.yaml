@@ -31,37 +31,35 @@ jobs:
       run: terraform init
       working-directory: terraform
 
-    # - name: Terraform Apply
-    #   run: |
-    #     terraform apply -auto-approve \
-    #       -var="do_token=${{ secrets.DO_TOKEN }}" \
-    #       -var="ssh_key_fingerprint=${{ secrets.SSH_KEY_FINGERPRINT }}" \
-    #       -var="droplet_name=${{ github.event.inputs.droplet_name }}" \
-    #       -var="region=fra1" \
-    #       -var="size=${{ github.event.inputs.size }}" \
-    #       -var="image=${{ github.event.inputs.image }}"
-    #   working-directory: terraform
+    - name: Terraform Apply
+      run: |
+        terraform apply -auto-approve \
+          -var="do_token=${{ secrets.DO_TOKEN }}" \
+          -var="ssh_key_fingerprint=${{ secrets.SSH_KEY_FINGERPRINT }}" \
+          -var="droplet_name=${{ github.event.inputs.droplet_name }}" \
+          -var="region=fra1" \
+          -var="size=${{ github.event.inputs.size }}" \
+          -var="image=${{ github.event.inputs.image }}"
+      working-directory: terraform
 
     - name: Capture Droplet IP
       id: droplet_ip
-      working-directory: terraform
       run: |
-        ip=$(terraform output -raw droplet_ip)
-        echo "ip=$ip" >> $GITHUB_OUTPUT
+        echo "ip=$(terraform -chdir=terraform output -raw droplet_ip)" >> $GITHUB_OUTPUT
 
-    # - name: Harden Droplet via SSH
-    #   run: |
-    #     echo "${{ secrets.SSH_PRIVATE_KEY }}" > id_rsa
-    #     chmod 600 id_rsa
+    - name: Harden Droplet via SSH
+      run: |
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > id_rsa
+        chmod 600 id_rsa
 
-    #     DROPLET_IP="${{ steps.droplet_ip.outputs.ip }}"
-    #     echo "✅ Using Droplet IP: $DROPLET_IP"
+        DROPLET_IP="${{ steps.droplet_ip.outputs.ip }}"
+        echo "✅ Using Droplet IP: $DROPLET_IP"
 
-    #     if [ -z "$DROPLET_IP" ]; then
-    #       echo "❌ ERROR: IP is empty"
-    #       exit 1
-    #     fi
+        if [ -z "$DROPLET_IP" ]; then
+          echo "❌ ERROR: IP is empty"
+          exit 1
+        fi
 
-    #     sleep 10
+        sleep 10
 
-    #     ssh -o StrictHostKeyChecking=no -i id_rsa root@"$DROPLET_IP" 'bash -s' < scripts/harden.sh
+        ssh -o StrictHostKeyChecking=no -i id_rsa root@"$DROPLET_IP" 'bash -s' < scripts/harden.sh
