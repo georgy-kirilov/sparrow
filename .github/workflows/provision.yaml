@@ -45,3 +45,13 @@ jobs:
     - name: Show Droplet IP
       run: terraform output -raw droplet_ip
       working-directory: terraform
+
+    - name: Harden droplet via SSH
+      run: |
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > id_rsa
+        chmod 600 id_rsa
+
+        DROPLET_IP=$(terraform output -raw droplet_ip)
+
+        ssh -o StrictHostKeyChecking=no -i id_rsa root@$DROPLET_IP 'bash -s' < scripts/harden.sh
+      working-directory: terraform
