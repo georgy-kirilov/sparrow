@@ -45,7 +45,15 @@ jobs:
     - name: Capture Droplet IP
       id: droplet_ip
       run: |
-        echo "ip=$(terraform -chdir=terraform output -raw droplet_ip)" >> $GITHUB_OUTPUT
+        cd terraform
+        # 1) write only Terraform’s stdout to ip.txt
+        terraform output -raw droplet_ip > ip.txt
+
+        # 2) safely read it back (newline-normalized)
+        IP="$(< ip.txt)"
+
+        # 3) set the GitHub Actions output
+        echo "ip=$IP" >> $GITHUB_OUTPUT
 
     - name: Harden Droplet via SSH
       run: |
