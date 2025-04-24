@@ -44,3 +44,4 @@ jobs:
 
     - name: Show Droplet IP
       run: terraform output -raw droplet_ip
+      working-directory: terraform
