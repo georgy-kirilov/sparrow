@@ -1,0 +1,44 @@
+name: Provision Droplet
+
+on:
+  workflow_dispatch:
+    inputs:
+      droplet_name:
+        description: "Name of the droplet"
+        required: true
+        default: "my-vps"
+      size:
+        description: "Droplet size (e.g. s-1vcpu-512mb-10gb)"
+        required: true
+        default: "s-1vcpu-512mb-10gb"
+      image:
+        description: "Image slug (e.g. ubuntu-22-04-x64)"
+        required: false
+        default: "ubuntu-22-04-x64"
+
+jobs:
+  provision:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@v2
+
+    - name: Terraform Init
+      run: terraform init
+
+    - name: Terraform Apply
+      run: |
+        terraform apply -auto-approve \
+          -var="do_token=${{ secrets.DO_TOKEN }}" \
+          -var="ssh_key_fingerprint=${{ secrets.SSH_KEY_FINGERPRINT }}" \
+          -var="droplet_name=${{ github.event.inputs.droplet_name }}" \
+          -var="region=fra1" \
+          -var="size=${{ github.event.inputs.size }}" \
+          -var="image=${{ github.event.inputs.image }}"
+
+    - name: Show Droplet IP
+      run: terraform output -raw droplet_ip
