@@ -29,6 +29,7 @@ jobs:
 
     - name: Terraform Init
       run: terraform init
+      working-directory: terraform
 
     - name: Terraform Apply
       run: |
@@ -39,6 +40,7 @@ jobs:
           -var="region=fra1" \
           -var="size=${{ github.event.inputs.size }}" \
           -var="image=${{ github.event.inputs.image }}"
+      working-directory: terraform
 
     - name: Show Droplet IP
       run: terraform output -raw droplet_ip
