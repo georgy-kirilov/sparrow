@@ -1,3 +1,16 @@
+variable "do_token" {
+  type      = string
+  sensitive = true
+}
+
+variable "ssh_key_fingerprint" {
+  type = string
+}
+
+variable "droplet_name" {
+  type = string
+}
+
 variable "region" {
   type    = string
   default = "fra1"
