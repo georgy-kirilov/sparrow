@@ -56,18 +56,25 @@ jobs:
         echo "ip=$ip" >> $GITHUB_OUTPUT
 
     - name: Harden Droplet via SSH
+      working-directory: terraform
       run: |
+        # write out the private key
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > id_rsa
         chmod 600 id_rsa
 
-        DROPLET_IP="${{ steps.droplet_ip.outputs.ip }}"
-        echo "✅ Using Droplet IP: $DROPLET_IP"
-
-        if [ -z "$DROPLET_IP" ]; then
-          echo "❌ ERROR: IP is empty"
+        IP="${{ steps.droplet_ip.outputs.ip }}"
+        echo "Using Droplet IP: $IP"
+        if [ -z "$IP" ]; then
+          echo "ERROR: IP is empty" >&2
           exit 1
         fi
 
-        sleep 10
+        # wait for SSH port 22 to be open & accepting keys
+        echo "Waiting for SSH to become available on $IP..."
+        until ssh -o BatchMode=yes -o ConnectTimeout=5 -i id_rsa root@"$IP" 'echo ✓' &>/dev/null; do
+          echo "  still waiting…"
+          sleep 5
+        done
 
-        ssh -o StrictHostKeyChecking=no -i id_rsa root@"$DROPLET_IP" 'bash -s' < scripts/harden.sh
+        # finally, run the hardening script
+        ssh -o StrictHostKeyChecking=no -i id_rsa root@"$IP" 'bash -s' < ../scripts/harden.sh
