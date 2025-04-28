@@ -29,7 +29,5 @@ resource "digitalocean_droplet" "vm" {
 }
 
 locals {
-  droplet = length(data.digitalocean_droplets.existing.droplets) > 0
-    ? data.digitalocean_droplets.existing.droplets[0]
-    : digitalocean_droplet.vm[0]
+  droplet = length(data.digitalocean_droplets.existing.droplets) > 0 ? data.digitalocean_droplets.existing.droplets[0] : digitalocean_droplet.vm[0]
 }
