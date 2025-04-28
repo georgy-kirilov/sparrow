@@ -5,7 +5,7 @@ set -e
 wait_for_apt() {
   while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 \
      || fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do
-    echo "Waiting for apt lock to be released…"
+    echo "⚙️  Waiting for apt lock to be released…"
     sleep 3
   done
 }
@@ -24,33 +24,35 @@ fi
 # 2) Ensure passwordless sudo
 SUDOERS_FILE="/etc/sudoers.d/$USERNAME"
 if ! grep -q "^$USERNAME ALL=.*NOPASSWD:ALL" "$SUDOERS_FILE" 2>/dev/null; then
-  echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" > "$SUDOERS_FILE"
-  chmod 0440 "$SUDOERS_FILE"
+  echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" | sudo tee "$SUDOERS_FILE" > /dev/null
+  sudo chmod 0440 "$SUDOERS_FILE"
 fi
 
 # 3) Copy SSH keys
 if [ -f /root/.ssh/authorized_keys ]; then
-  mkdir -p /home/$USERNAME/.ssh
-  cp /root/.ssh/authorized_keys /home/$USERNAME/.ssh/
-  chown -R $USERNAME:$USERNAME /home/$USERNAME/.ssh
-  chmod 700 /home/$USERNAME/.ssh
-  chmod 600 /home/$USERNAME/.ssh/authorized_keys
+  mkdir -p "/home/$USERNAME/.ssh"
+  cp /root/.ssh/authorized_keys "/home/$USERNAME/.ssh/"
+  chown -R "$USERNAME:$USERNAME" "/home/$USERNAME/.ssh"
+  chmod 700 "/home/$USERNAME/.ssh"
+  chmod 600 "/home/$USERNAME/.ssh/authorized_keys"
 fi
 
 # 4) Harden SSH configuration
-sed -i 's/^#\?PermitRootLogin .*/PermitRootLogin no/' /etc/ssh/sshd_config
-sed -i 's/^#\?PasswordAuthentication .*/PasswordAuthentication no/' /etc/ssh/sshd_config
-systemctl restart sshd
+sudo sed -i 's/^#\?PermitRootLogin .*/PermitRootLogin no/' /etc/ssh/sshd_config
+sudo sed -i 's/^#\?PasswordAuthentication .*/PasswordAuthentication no/' /etc/ssh/sshd_config
+sudo systemctl restart sshd
 
-# 5) Enable unattended security upgrades without interactive prompts
+# 5) Fix sources.list, then install & enable unattended upgrades
 wait_for_apt
-dpkg --purge --force-all unattended-upgrades || true # remove old config if corrupted
-debconf-set-selections <<< 'unattended-upgrades unattended-upgrades/enable_auto_updates boolean true'
-apt-get update
-apt-get install -y unattended-upgrades
+# Remove any invalid lines, keep only 'deb' and 'deb-src' entries
+sudo sed -i '/^\(deb\|deb-src\) /!d' /etc/apt/sources.list
 
-# Write auto-upgrades config
-cat << 'EOF' > /etc/apt/apt.conf.d/20auto-upgrades
+wait_for_apt
+sudo apt-get update
+sudo apt-get install -y unattended-upgrades
+
+# Drop in auto-upgrades config
+sudo tee /etc/apt/apt.conf.d/20auto-upgrades > /dev/null << 'EOF'
 APT::Periodic::Update-Package-Lists "1";
 APT::Periodic::Unattended-Upgrade "1";
 EOF
