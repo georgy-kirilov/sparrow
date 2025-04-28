@@ -54,15 +54,10 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Harden Droplet via SSH
-        working-directory: terraform
+      - name: Harden Droplet SSH
         run: |
           IP="${{ steps.droplet_ip.outputs.ip }}"
           echo "Using Droplet IP: $IP"
-          if [ -z "$IP" ]; then
-            echo "ERROR: IP is empty" >&2
-            exit 1
-          fi
 
           echo "Waiting for SSH to become available on $IP…"
           until ssh \
@@ -74,4 +69,12 @@ jobs:
             sleep 5
           done
 
-          ssh -o StrictHostKeyChecking=no root@"$IP" 'bash -s' < ../scripts/harden.sh
+          ssh -o StrictHostKeyChecking=no root@"$IP" 'bash -s' < scripts/harden_ssh.sh
+
+      - name: Setup UFW
+        run: |
+          ssh -o StrictHostKeyChecking=no deployer@"$IP" 'sudo bash -s' < scripts/setup_ufw.sh
+
+      - name: Setup Fail2ban
+        run: |
+          ssh -o StrictHostKeyChecking=no deployer@"$IP" 'sudo bash -s' < scripts/setup_fail2ban.sh
