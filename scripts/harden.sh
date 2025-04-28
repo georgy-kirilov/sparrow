@@ -10,6 +10,12 @@ if ! id -u "$USERNAME" > /dev/null 2>&1; then
   usermod -aG sudo $USERNAME
 fi
 
+SUDOERS_FILE="/etc/sudoers.d/$USERNAME"
+if ! grep -q "^$USERNAME ALL=.*NOPASSWD:ALL" "$SUDOERS_FILE" 2>/dev/null; then
+  echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" > "$SUDOERS_FILE"
+  chmod 0440 "$SUDOERS_FILE"
+fi
+
 # Copy SSH keys from root only if they exist and not already copied
 if [ -f /root/.ssh/authorized_keys ]; then
   mkdir -p /home/$USERNAME/.ssh
