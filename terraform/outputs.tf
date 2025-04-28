@@ -1,3 +1,3 @@
 output "droplet_ip" {
-  value = digitalocean_droplet.vm.ipv4_address
+  value = local.droplet.ipv4_address
 }

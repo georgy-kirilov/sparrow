@@ -37,7 +37,6 @@ jobs:
           -var="do_token=${{ secrets.DO_TOKEN }}" \
           -var="ssh_key_fingerprint=${{ secrets.SSH_KEY_FINGERPRINT }}" \
           -var="droplet_name=${{ github.event.inputs.droplet_name }}" \
-          -var="region=fra1" \
           -var="size=${{ github.event.inputs.size }}" \
           -var="image=${{ github.event.inputs.image }}"
       working-directory: terraform
