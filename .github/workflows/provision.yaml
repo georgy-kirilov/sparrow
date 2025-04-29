@@ -64,7 +64,7 @@ jobs:
             -o BatchMode=yes \
             -o ConnectTimeout=5 \
             -o StrictHostKeyChecking=no \
-            root@"$IP" 'echo ✓' &>/dev/null; do
+            deployer@"$IP" 'echo ✓' &>/dev/null; do
             echo "  still waiting…"
             sleep 5
           done
