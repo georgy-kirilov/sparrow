@@ -71,8 +71,14 @@ jobs:
             sleep 5
           done
 
-          # 2) Configure UFW & Fail2Ban as deployer
-          ssh -oStrictHostKeyChecking=no deployer@"$IP" << 'EOF'
-            sudo bash -s < scripts/setup_ufw.sh
-            sudo bash -s < scripts/setup_fail2ban.sh
-          EOF
+          # 2) Wait for deployer SSH
+          echo "Waiting for deployer SSH on $IP…"
+          until ssh -oBatchMode=yes -oConnectTimeout=5 -oStrictHostKeyChecking=no deployer@"$IP" 'echo ✓' &>/dev/null; do
+            sleep 3
+          done
+
+          # 3) Run UFW
+          ssh -oStrictHostKeyChecking=no deployer@"$IP" 'bash -s' < scripts/setup_ufw.sh
+
+          # 4) Run Fail2Ban
+          ssh -oStrictHostKeyChecking=no deployer@"$IP" 'bash -s' < scripts/setup_fail2ban.sh
