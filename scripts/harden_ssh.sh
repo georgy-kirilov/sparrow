@@ -1,36 +1,65 @@
-#!/bin/bash
-
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
 
 USERNAME=deployer
 
-# Create user only if it doesn't already exist
-if ! id -u "$USERNAME" > /dev/null 2>&1; then
-  adduser --disabled-password --gecos "" $USERNAME
-  usermod -aG sudo $USERNAME
+# 0) Disable any automatic apt jobs
+sudo systemctl stop      \
+    apt-daily.service     \
+    apt-daily.timer       \
+    apt-daily-upgrade.service \
+    apt-daily-upgrade.timer \
+  || true
+sudo systemctl disable   \
+    apt-daily.service     \
+    apt-daily.timer       \
+    apt-daily-upgrade.service \
+    apt-daily-upgrade.timer \
+  || true
+
+# 1) Wait for any apt/dpkg lock
+wait_for_apt() {
+  local locks=(
+    /var/lib/dpkg/lock
+    /var/lib/dpkg/lock-frontend
+    /var/lib/apt/lists/lock
+    /var/cache/apt/archives/lock
+  )
+  while sudo fuser "${locks[@]}" &>/dev/null; do
+    echo "⚙️  Waiting for apt lock to be released…"
+    sleep 3
+  done
+}
+wait_for_apt
+
+# 2) Create deployer user if missing, add to sudo
+if ! id -u "$USERNAME" &>/dev/null; then
+  sudo adduser --disabled-password --gecos "" "$USERNAME"
+  sudo usermod -aG sudo "$USERNAME"
 fi
 
-# Grant passwordless sudo permissions to user
-SUDOERS_FILE="/etc/sudoers.d/$USERNAME"
-if ! grep -q "^$USERNAME ALL=.*NOPASSWD:ALL" "$SUDOERS_FILE" 2>/dev/null; then
-  echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" > "$SUDOERS_FILE"
-  chmod 0440 "$SUDOERS_FILE"
+# 3) Grant passwordless sudo
+SUDOERS="/etc/sudoers.d/$USERNAME"
+if ! sudo grep -q "^$USERNAME ALL=.*NOPASSWD:ALL" "$SUDOERS" 2>/dev/null; then
+  echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" | sudo tee "$SUDOERS"
+  sudo chmod 0440 "$SUDOERS"
 fi
 
-# Copy SSH keys from root only if they exist and not already copied
+# 4) Copy root’s SSH keys if present
 if [ -f /root/.ssh/authorized_keys ]; then
-  mkdir -p /home/$USERNAME/.ssh
-  cp /root/.ssh/authorized_keys /home/$USERNAME/.ssh/
-  chown -R $USERNAME:$USERNAME /home/$USERNAME/.ssh
-  chmod 700 /home/$USERNAME/.ssh
-  chmod 600 /home/$USERNAME/.ssh/authorized_keys
+  sudo install -o "$USERNAME" -g "$USERNAME" -m 0700 -d /home/"$USERNAME"/.ssh
+  sudo cp /root/.ssh/authorized_keys /home/"$USERNAME"/.ssh/
+  sudo chmod 600 /home/"$USERNAME"/.ssh/authorized_keys
 fi
 
-# Harden SSH config
-sed -i 's/^#\?PermitRootLogin .*/PermitRootLogin no/' /etc/ssh/sshd_config
-sed -i 's/^#\?PasswordAuthentication .*/PasswordAuthentication no/' /etc/ssh/sshd_config
-systemctl restart sshd
+# 5) Harden SSH config
+sudo sed -i 's/^#\?PermitRootLogin .*/PermitRootLogin no/' /etc/ssh/sshd_config
+sudo sed -i 's/^#\?PasswordAuthentication .*/PasswordAuthentication no/' /etc/ssh/sshd_config
+sudo systemctl restart sshd
 
-# Enable auto security updates
-apt install -y unattended-upgrades
-dpkg-reconfigure -f noninteractive unattended-upgrades
+# 6) Enable auto security updates
+wait_for_apt
+sudo apt-get update
+wait_for_apt
+sudo apt-get install -y unattended-upgrades
+sudo DEBIAN_FRONTEND=noninteractive dpkg-reconfigure -f noninteractive unattended-upgrades

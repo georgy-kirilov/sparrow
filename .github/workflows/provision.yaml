@@ -54,29 +54,25 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Harden Droplet SSH
+      - name: Configure & secure droplet
         run: |
           IP="${{ steps.droplet_ip.outputs.ip }}"
           echo "Using Droplet IP: $IP"
 
-          echo "Waiting for SSH to become available on $IP…"
-          until ssh \
-            -o BatchMode=yes \
-            -o ConnectTimeout=5 \
-            -o StrictHostKeyChecking=no \
-            root@"$IP" 'echo ✓' &>/dev/null; do
-            echo "  still waiting…"
+          # 1) Harden SSH as root, with retries
+          attempt=0; max=5
+          until ssh -oBatchMode=yes -oConnectTimeout=5 -oStrictHostKeyChecking=no root@"$IP" 'bash -s' < scripts/harden_ssh.sh; do
+            (( attempt++ )) || true
+            if (( attempt>=max )); then
+              echo "Failed to harden SSH after $attempt attempts" >&2
+              exit 1
+            fi
+            echo "Retrying harden_ssh.sh ($attempt/$max) in 5s…"
             sleep 5
           done
 
-          ssh -o StrictHostKeyChecking=no root@"$IP" 'bash -s' < scripts/harden_ssh.sh
-
-      - name: Setup UFW
-        run: |
-          IP="${{ steps.droplet_ip.outputs.ip }}"
-          ssh -o StrictHostKeyChecking=no deployer@"$IP" 'sudo bash -s' < scripts/setup_ufw.sh
-
-      - name: Setup Fail2ban
-        run: |
-          IP="${{ steps.droplet_ip.outputs.ip }}"
-          ssh -o StrictHostKeyChecking=no deployer@"$IP" 'sudo bash -s' < scripts/setup_fail2ban.sh
+          # 2) Configure UFW & Fail2Ban as deployer
+          ssh -oStrictHostKeyChecking=no deployer@"$IP" << 'EOF'
+            sudo bash -s < scripts/setup_ufw.sh
+            sudo bash -s < scripts/setup_fail2ban.sh
+          EOF
