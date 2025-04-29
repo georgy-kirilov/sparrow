@@ -69,7 +69,7 @@ jobs:
             sleep 5
           done
 
-          ssh -o StrictHostKeyChecking=no deployer@"$IP" 'bash -s' < scripts/harden_ssh.sh
+          ssh -o StrictHostKeyChecking=no deployer@"$IP" 'sudo bash -s' < scripts/harden_ssh.sh
 
       - name: Setup UFW
         run: |
