@@ -69,12 +69,14 @@ jobs:
             sleep 5
           done
 
-          ssh -o StrictHostKeyChecking=no root@"$IP" 'bash -s' < scripts/harden_ssh.sh
+          ssh -o StrictHostKeyChecking=no deployer@"$IP" 'bash -s' < scripts/harden_ssh.sh
 
       - name: Setup UFW
         run: |
+          IP="${{ steps.droplet_ip.outputs.ip }}"
           ssh -o StrictHostKeyChecking=no deployer@"$IP" 'sudo bash -s' < scripts/setup_ufw.sh
 
       - name: Setup Fail2ban
         run: |
+          IP="${{ steps.droplet_ip.outputs.ip }}"
           ssh -o StrictHostKeyChecking=no deployer@"$IP" 'sudo bash -s' < scripts/setup_fail2ban.sh
