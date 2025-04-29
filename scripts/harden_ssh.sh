@@ -47,9 +47,12 @@ fi
 
 # 4) Copy root’s SSH keys if present
 if [ -f /root/.ssh/authorized_keys ]; then
+  # make the .ssh directory owned by deployer
   sudo install -o "$USERNAME" -g "$USERNAME" -m 0700 -d /home/"$USERNAME"/.ssh
-  sudo cp /root/.ssh/authorized_keys /home/"$USERNAME"/.ssh/
-  sudo chmod 600 /home/"$USERNAME"/.ssh/authorized_keys
+  # copy the file, set owner and 600 perms
+  sudo install -o "$USERNAME" -g "$USERNAME" -m 0600 \
+    /root/.ssh/authorized_keys \
+    /home/"$USERNAME"/.ssh/authorized_keys
 fi
 
 # 5) Harden SSH config
