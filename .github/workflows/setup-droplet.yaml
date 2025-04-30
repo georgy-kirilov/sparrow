@@ -1,0 +1,56 @@
+name: Setup Droplet
+
+on:
+  workflow_dispatch:
+    inputs:
+      droplet_name:
+        description: "Name"
+        required: true
+      droplet_size:
+        description: "Size"
+        required: true
+        default: "s-1vcpu-512mb-10gb"
+      droplet_image:
+        description: "Image"
+        required: true
+        default: "ubuntu-22-04-x64"
+      droplet_region:
+        description: "Region"
+        required: true
+        default: "fra1"
+
+jobs:
+  setup_droplet:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Terraform CLI
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.7"
+          terraform_wrapper: false 
+
+      - name: Terraform init
+        run: terraform init -no-color
+        working-directory: infra/terraform
+
+      - name: Terraform apply
+        run: |
+          terraform apply -auto-approve \
+            -var="do_token=${{ secrets.DO_TOKEN }}" \
+            -var="ssh_key_fingerprint=${{ secrets.SSH_KEY_FINGERPRINT }}" \
+            -var="droplet_name=${{ github.event.inputs.droplet_name }}" \
+            -var="size=${{ github.event.inputs.droplet_size }}" \
+            -var="image=${{ github.event.inputs.droplet_image }}" \
+            -var="region=${{ github.event.inputs.droplet_region }}"
+        working-directory: infra/terraform
+
+      - name: Capture droplet IP
+        id: droplet_ip
+        working-directory: infra/terraform
+        run: |
+          raw_ip=$(terraform output -raw droplet_ip -no-color)
+          ip=$(echo "$raw_ip" | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}' | head -n1)
+          echo "ip=$ip" >> $GITHUB_OUTPUT
