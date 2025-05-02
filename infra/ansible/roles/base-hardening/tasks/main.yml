@@ -59,10 +59,10 @@
       ufw:
         rule: allow
         port: "{{ item }}"
-        loop:
-          - 80
-          - 443
         proto: tcp
+      loop:
+        - 80
+        - 443
 
     - name: Enable UFW
       ufw:
