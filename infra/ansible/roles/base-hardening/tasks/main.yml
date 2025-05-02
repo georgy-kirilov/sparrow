@@ -17,3 +17,28 @@
     dest: /etc/sudoers.d/deploy
     content: "deploy ALL=(ALL) NOPASSWD:ALL"
     mode: '0440'
+
+- name: Install UFW
+  apt:
+    name: ufw
+    state: present
+    update_cache: yes
+
+- name: Allow SSH through UFW
+  ufw:
+    rule: allow
+    name: OpenSSH
+
+- name: Allow HTTP/HTTPS through UFW
+  ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop:
+    - 80
+    - 443
+
+- name: Enable UFW
+  ufw:
+    state: enabled
+    logging: on

@@ -70,7 +70,7 @@ jobs:
           ansible --version
           ls -R infra/ansible
 
-      - name: Prepare SSH key for Ansible
+      - name: Prepare SSH private key for Ansible
         run: |
           mkdir -p infra/ansible
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > infra/ansible/ansible_key
@@ -92,7 +92,7 @@ jobs:
         working-directory: infra/ansible
         run: ansible all -m ping --inventory inventory.ini
 
-      - name: Create deploy user
+      - name: Apply Ansible playbook
         working-directory: infra/ansible
         run: ansible-playbook site.yml
         env:
