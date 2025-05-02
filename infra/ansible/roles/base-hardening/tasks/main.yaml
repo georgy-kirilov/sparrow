@@ -1,0 +1,19 @@
+---
+- name: Create deploy user
+  user:
+    name: deploy
+    shell: /bin/bash
+    state: present
+    create_home: true
+
+- name: Add SSH key for deploy user
+  authorized_key:
+    user: deploy
+    key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+    state: present
+
+- name: Grant deploy user passwordless sudo
+  copy:
+    dest: /etc/sudoers.d/deploy
+    content: "deploy ALL=(ALL) NOPASSWD:ALL"
+    mode: '0440'

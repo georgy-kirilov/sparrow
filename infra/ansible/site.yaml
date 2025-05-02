@@ -1,0 +1,5 @@
+---
+- hosts: vps
+  become: true
+  roles:
+    - base-hardening

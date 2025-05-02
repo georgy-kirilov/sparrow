@@ -81,7 +81,13 @@ jobs:
           [vps]
           ${{ steps.droplet_ip.outputs.ip }} ansible_user=root ansible_ssh_private_key_file=ansible_key
           EOF
-      
+
       - name: Verify connectivity to VPS
         working-directory: infra/ansible
         run: ansible all -m ping --inventory inventory.ini
+
+      - name: Create deploy user
+        working-directory: infra/ansible
+        run: ansible-playbook site.yaml
+        env:
+          ANSIBLE_CONFIG: ./ansible.cfg
