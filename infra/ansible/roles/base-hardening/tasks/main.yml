@@ -6,6 +6,22 @@
     state: present
     create_home: true
 
+- name: Ensure deploy .ssh directory exists
+  file:
+    path: /home/deploy/.ssh
+    state: directory
+    owner: deploy
+    group: deploy
+    mode: '0700'
+
+- name: Ensure authorized_keys file is present
+  file:
+    path: /home/deploy/.ssh/authorized_keys
+    state: touch
+    owner: deploy
+    group: deploy
+    mode: '0600'
+
 - name: Add SSH key for deploy user
   authorized_key:
     user: deploy
