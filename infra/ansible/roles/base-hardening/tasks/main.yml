@@ -75,6 +75,12 @@
         state: started
         enabled: yes
 
+    - name: Install Docker + Compose via official convenience script
+      shell: curl -fsSL https://get.docker.com | sh
+      args:
+        executable: /bin/bash
+        creates: /usr/bin/docker
+
     - name: Restart SSH to apply changes
       service:
         name: ssh
