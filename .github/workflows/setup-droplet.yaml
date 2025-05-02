@@ -78,7 +78,8 @@ jobs:
 
       - name: Write SSH public key
         run: |
-          echo "${{ secrets.SSH_PUBLIC_KEY }}" > infra/ansible/deploy_key.pub
+          mkdir -p infra/ansible
+          printf "%s" "${{ secrets.SSH_PUBLIC_KEY }}" > infra/ansible/deploy_key.pub
           chmod 644 infra/ansible/deploy_key.pub
 
       - name: Generate Ansible inventory

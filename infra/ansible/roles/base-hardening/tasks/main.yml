@@ -14,10 +14,20 @@
     group: deploy
     mode: '0700'
 
-- name: Copy SSH public key into authorized_keys
-  copy:
-    src: deploy_key.pub
-    dest: /home/deploy/.ssh/authorized_keys
+- name: Debug: show deploy_key.pub contents
+  debug:
+    msg: "{{ lookup('file','deploy_key.pub') }}"
+
+- name: Add SSH public key for deploy user
+  authorized_key:
+    user: deploy
+    path: /home/deploy/.ssh/authorized_keys
+    state: present
+    key: "{{ lookup('file', 'deploy_key.pub') }}"
+
+- name: Ensure correct perms on authorized_keys
+  file:
+    path: /home/deploy/.ssh/authorized_keys
     owner: deploy
     group: deploy
     mode: '0600'
