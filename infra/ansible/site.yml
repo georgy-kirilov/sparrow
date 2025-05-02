@@ -1,5 +1,17 @@
 ---
-- hosts: vps
+- name: Bootstrap deploy user as root
+  hosts: vps
+  remote_user: root
+  roles:
+    - role: base-hardening
+      vars:
+        run_bootstrap: true
+
+- name: Harden server as deploy
+  hosts: vps
+  remote_user: deploy
   become: true
   roles:
-    - base-hardening
+    - role: base-hardening
+      vars:
+        run_bootstrap: false
