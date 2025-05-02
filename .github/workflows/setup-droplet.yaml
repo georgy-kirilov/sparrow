@@ -68,3 +68,20 @@ jobs:
         run: |
           ansible --version
           ls -R infra/ansible
+
+      - name: Prepare SSH key for Ansible
+        run: |
+          mkdir -p infra/ansible
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > infra/ansible/ansible_key
+          chmod 600 infra/ansible/ansible_key
+
+      - name: Generate Ansible inventory
+        run: |
+          cat > infra/ansible/inventory.ini <<EOF
+          [vps]
+          ${{ steps.droplet_ip.outputs.ip }} ansible_user=root ansible_ssh_private_key_file=ansible_key
+          EOF
+      
+      - name: Verify connectivity to VPS
+        working-directory: infra/ansible
+        run: ansible all -m ping --inventory inventory.ini
