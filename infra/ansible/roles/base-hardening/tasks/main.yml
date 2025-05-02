@@ -9,7 +9,7 @@
 - name: Add SSH key for deploy user
   authorized_key:
     user: deploy
-    key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+    key: "{{ lookup('file', 'deploy_key.pub') }}"
     state: present
 
 - name: Grant deploy user passwordless sudo

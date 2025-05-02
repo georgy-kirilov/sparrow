@@ -75,6 +75,11 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > infra/ansible/ansible_key
           chmod 600 infra/ansible/ansible_key
 
+      - name: Write SSH public key
+        run: |
+          echo "${{ secrets.SSH_PUBLIC_KEY }}" > infra/ansible/deploy_key.pub
+          chmod 644 infra/ansible/deploy_key.pub
+
       - name: Generate Ansible inventory
         run: |
           cat > infra/ansible/inventory.ini <<EOF
@@ -88,6 +93,6 @@ jobs:
 
       - name: Create deploy user
         working-directory: infra/ansible
-        run: ansible-playbook site.yaml
+        run: ansible-playbook site.yml
         env:
           ANSIBLE_CONFIG: ./ansible.cfg
