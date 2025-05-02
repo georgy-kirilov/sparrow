@@ -14,10 +14,6 @@
     group: deploy
     mode: '0700'
 
-- name: Debug - show deploy_key.pub contents
-  debug:
-    msg: "{{ lookup('file','deploy_key.pub') }}"
-
 - name: Add SSH public key for deploy user
   authorized_key:
     user: deploy
