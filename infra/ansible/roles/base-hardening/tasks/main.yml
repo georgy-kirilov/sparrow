@@ -6,7 +6,7 @@
         shell: /bin/bash
         create_home: true
 
-    - name: Ensure deploy’s .ssh dir exists
+    - name: Ensure deploy user .ssh dir exists
       file:
         path: /home/deploy/.ssh
         state: directory
