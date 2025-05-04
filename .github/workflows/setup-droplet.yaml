@@ -103,14 +103,14 @@ jobs:
         env:
           ANSIBLE_CONFIG: ./ansible.cfg
 
-      - name: Run NGINX container on VPS
+      - name: Run traefik/whoami container on VPS
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ steps.droplet_ip.outputs.ip }}
           username: deploy
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            sudo docker run -d --name nginx --restart unless-stopped -p 80:80 nginx
+            sudo docker run -d --name traefik-whoami --restart unless-stopped -p 80:80 traefik/whoami
 
       - name: Install curl and jq on runner
         run: |
@@ -126,3 +126,39 @@ jobs:
         run: |
           chmod +x infra/scripts/update-dns.sh
           infra/scripts/update-dns.sh
+
+      - name: Wait for DNS to propagate
+        run: |
+          DOMAIN=${{ steps.full_domain.outputs.value }}
+          EXPECTED_IP=${{ steps.droplet_ip.outputs.ip }}
+          echo "Waiting for $DOMAIN to resolve to $EXPECTED_IP..."
+          for i in $(seq 1 30); do
+            RESOLVED=$(dig +short "$DOMAIN" A | head -n1)
+            if [[ "$RESOLVED" == "$EXPECTED_IP" ]]; then
+              echo "DNS propagated after $i attempts."
+              break
+            fi
+            echo "Attempt $i: got '${RESOLVED:-none}'; retrying in 10s..."
+            sleep 10
+          done
+          if [[ "$RESOLVED" != "$EXPECTED_IP" ]]; then
+            echo "::error::DNS did not propagate after 5 minutes"
+            exit 1
+          fi
+
+      - name: Obtain TLS certificate
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ steps.droplet_ip.outputs.ip }}
+          username: deploy
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            FULL_DOMAIN='${{ steps.full_domain.outputs.value }}'
+            TLS_EMAIL='${{ secrets.TLS_EMAIL }}'
+
+            sudo docker stop traefik-whoami  || true
+            sudo docker rm   traefik-whoami  || true
+
+            cd /srv/application
+            sudo env FULL_DOMAIN="$FULL_DOMAIN" TLS_EMAIL="$TLS_EMAIL" \
+              docker compose -f compose.yaml up -d

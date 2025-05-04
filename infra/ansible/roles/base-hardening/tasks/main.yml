@@ -1,105 +1,128 @@
 ---
-- block:
-    - name: Create deploy user
-      user:
-        name: deploy
-        shell: /bin/bash
-        create_home: true
+- hosts: vps
+  become: true
+  vars:
+    run_bootstrap: "{{ run_bootstrap | default(false) }}"
 
-    - name: Ensure deploy user .ssh dir exists
-      file:
-        path: /home/deploy/.ssh
-        state: directory
-        owner: deploy
-        group: deploy
-        mode: '0700'
+  tasks:
 
-    - name: Add SSH public key for deploy
-      authorized_key:
-        user: deploy
-        key: "{{ lookup('file','deploy_key.pub') }}"
-        state: present
+    - block:
+        - name: Create deploy user
+          user:
+            name: deploy
+            shell: /bin/bash
+            create_home: true
 
-    - name: Grant deploy user passwordless sudo
-      copy:
-        dest: /etc/sudoers.d/deploy
-        content: "deploy ALL=(ALL) NOPASSWD:ALL"
-        mode: '0440'
-  when: run_bootstrap | bool
+        - name: Ensure deploy user .ssh dir exists
+          file:
+            path: /home/deploy/.ssh
+            state: directory
+            owner: deploy
+            group: deploy
+            mode: '0700'
 
-- block:
-    - name: Update and upgrade APT packages
-      apt:
-        update_cache: yes
-        upgrade: dist
+        - name: Add SSH public key for deploy
+          authorized_key:
+            user: deploy
+            key: "{{ lookup('file','deploy_key.pub') }}"
+            state: present
 
-    - name: Disable SSH root login
-      lineinfile:
-        path: /etc/ssh/sshd_config
-        regexp: '^#?PermitRootLogin'
-        line: 'PermitRootLogin no'
-        backrefs: yes
+        - name: Grant deploy user passwordless sudo
+          copy:
+            dest: /etc/sudoers.d/deploy
+            content: "deploy ALL=(ALL) NOPASSWD:ALL"
+            mode: '0440'
+      when: run_bootstrap | bool
 
-    - name: Disable SSH password auth
-      lineinfile:
-        path: /etc/ssh/sshd_config
-        regexp: '^#?PasswordAuthentication'
-        line: 'PasswordAuthentication no'
-        backrefs: yes
+    - block:
+        - name: Update and upgrade APT packages
+          apt:
+            update_cache: yes
+            upgrade: dist
 
-    - name: Install UFW and Fail2Ban
-      apt:
-        name:
-          - ufw
-          - fail2ban
-        state: present
-        update_cache: yes
+        - name: Disable SSH root login
+          lineinfile:
+            path: /etc/ssh/sshd_config
+            regexp: '^#?PermitRootLogin'
+            line: 'PermitRootLogin no'
+            backrefs: yes
 
-    - name: Allow SSH through UFW
-      ufw:
-        rule: allow
-        name: OpenSSH
+        - name: Disable SSH password auth
+          lineinfile:
+            path: /etc/ssh/sshd_config
+            regexp: '^#?PasswordAuthentication'
+            line: 'PasswordAuthentication no'
+            backrefs: yes
 
-    - name: Allow HTTP/HTTPS through UFW
-      ufw:
-        rule: allow
-        port: "{{ item }}"
-        proto: tcp
-      loop:
-        - 80
-        - 443
+        - name: Install UFW and Fail2Ban
+          apt:
+            name:
+              - ufw
+              - fail2ban
+            state: present
+            update_cache: yes
 
-    - name: Enable UFW
-      ufw:
-        state: enabled
-        logging: on
+        - name: Allow SSH through UFW
+          ufw:
+            rule: allow
+            name: OpenSSH
 
-    - name: Ensure Fail2Ban is running and enabled
-      service:
-        name: fail2ban
-        state: started
-        enabled: yes
+        - name: Allow HTTP/HTTPS through UFW
+          ufw:
+            rule: allow
+            port: "{{ item }}"
+            proto: tcp
+          loop:
+            - 80
+            - 443
 
-    - name: Install Docker and Compose via official convenience script
-      shell: curl -fsSL https://get.docker.com | sh
-      args:
-        executable: /bin/bash
-        creates: /usr/bin/docker
+        - name: Enable UFW
+          ufw:
+            state: enabled
+            logging: on
 
-    - name: Ensure Docker service is started and enabled
-      service:
-        name: docker
-        state: started
-        enabled: yes
+        - name: Ensure Fail2Ban is running and enabled
+          service:
+            name: fail2ban
+            state: started
+            enabled: yes
 
-    - name: Verify Docker Compose plugin is available
-      command: docker compose version
-      register: compose_check
-      changed_when: false
-      failed_when: compose_check.rc != 0
+        - name: Install Docker and Compose via official convenience script
+          shell: curl -fsSL https://get.docker.com | sh
+          args:
+            executable: /bin/bash
+            creates: /usr/bin/docker
 
-    - name: Restart SSH to apply changes
-      service:
-        name: ssh
-        state: restarted
-  when: not run_bootstrap | bool
+        - name: Ensure Docker service is started and enabled
+          service:
+            name: docker
+            state: started
+            enabled: yes
+
+        - name: Verify Docker Compose plugin is available
+          command: docker compose version
+          register: compose_check
+          changed_when: false
+          failed_when: compose_check.rc != 0
+
+        - name: Ensure application directory exists
+          file:
+            path: /srv/application
+            state: directory
+            owner: deploy
+            group: deploy
+            mode: '0755'
+
+        - name: Copy Docker Compose file to /srv/application
+          copy:
+            src: ../docker/compose.yaml
+            dest: /srv/application/compose.yaml
+            owner: deploy
+            group: deploy
+            mode: '0644'
+
+        - name: Restart SSH to apply changes
+          service:
+            name: ssh
+            state: restarted
+      when: not run_bootstrap | bool
