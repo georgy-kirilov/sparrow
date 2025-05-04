@@ -3,8 +3,8 @@ name: Setup Droplet
 on:
   workflow_dispatch:
     inputs:
-      droplet_name:
-        description: "Name"
+      droplet_subdomain:
+        description: "Subdomain"
         required: true
       droplet_size:
         description: "Size"
@@ -23,6 +23,10 @@ jobs:
   setup_droplet:
     runs-on: ubuntu-latest
     steps:
+      - name: Construct full domain
+        id: full_domain
+        run: echo "value=${{ github.event.inputs.droplet_subdomain }}.${{ secrets.DOMAIN_NAME }}" >> $GITHUB_OUTPUT
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -41,7 +45,7 @@ jobs:
           terraform apply -auto-approve \
             -var="do_token=${{ secrets.DO_TOKEN }}" \
             -var="ssh_key_fingerprint=${{ secrets.SSH_KEY_FINGERPRINT }}" \
-            -var="droplet_name=${{ github.event.inputs.droplet_name }}" \
+            -var="droplet_name=${{ steps.full_domain.outputs.value }}" \
             -var="size=${{ github.event.inputs.droplet_size }}" \
             -var="image=${{ github.event.inputs.droplet_image }}" \
             -var="region=${{ github.event.inputs.droplet_region }}"
@@ -98,3 +102,23 @@ jobs:
         run: ansible-playbook site.yml
         env:
           ANSIBLE_CONFIG: ./ansible.cfg
+
+      - name: Run NGINX container
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ steps.droplet_ip.outputs.ip }}
+          username: deploy
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            sudo docker run -d --name nginx --restart unless-stopped -p 80:80 nginx
+
+      - name: Update DNS record on Cloudflare
+        uses: amilochau/cloudflare-update-records@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_TOKEN }}
+          zoneId: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          record: ${{ steps.full_domain.outputs.value }}
+          type: A
+          content: ${{ steps.droplet_ip.outputs.ip }}
+          ttl: 300
+          proxied: false
