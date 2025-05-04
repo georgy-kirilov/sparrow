@@ -103,8 +103,8 @@ jobs:
         env:
           ANSIBLE_CONFIG: ./ansible.cfg
 
-      - name: Run NGINX container
-        uses: appleboy/ssh-action@v1.0.0
+      - name: Run NGINX container on VPS
+        uses: appleboy/ssh-action@v1
         with:
           host: ${{ steps.droplet_ip.outputs.ip }}
           username: deploy
@@ -112,13 +112,17 @@ jobs:
           script: |
             sudo docker run -d --name nginx --restart unless-stopped -p 80:80 nginx
 
-      - name: Update DNS record on Cloudflare
-        uses: amilochau/cloudflare-update-records@v2.0.0
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_TOKEN }}
-          zoneId: ${{ secrets.CLOUDFLARE_ZONE_ID }}
-          record: ${{ steps.full_domain.outputs.value }}
-          type: A
-          content: ${{ steps.droplet_ip.outputs.ip }}
-          ttl: 300
-          proxied: false
+      - name: Install curl and jq on runner
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl jq
+
+      - name: Update DNS on Cloudflare
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_TOKEN }}
+          CF_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          FULL_DOMAIN: ${{ steps.full_domain.outputs.value }}
+          DROPLET_IP: ${{ steps.droplet_ip.outputs.ip }}
+        run: |
+          chmod +x infra/scripts/update-dns.sh
+          infra/scripts/update-dns.sh
