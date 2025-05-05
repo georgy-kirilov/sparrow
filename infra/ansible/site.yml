@@ -3,7 +3,7 @@
   hosts: vps
   remote_user: root
   roles:
-    - role: base-hardening
+    - role: setup-droplet
       vars:
         run_bootstrap: true
 
@@ -12,6 +12,6 @@
   remote_user: deploy
   become: true
   roles:
-    - role: base-hardening
+    - role: setup-droplet
       vars:
         run_bootstrap: false
