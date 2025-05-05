@@ -1,0 +1,7 @@
+include:
+  - path:
+      - api/compose.yaml
+      - api/compose.override.yaml
+  - path:
+      - traefik/compose.yaml
+      - traefik/compose.override.yaml

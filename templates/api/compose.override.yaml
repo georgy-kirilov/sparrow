@@ -1,0 +1,25 @@
+services:
+  api:
+    # image: !reset null
+    # build:
+    #   context: .
+    #   dockerfile: Application/Dockerfile.development
+    deploy:
+      replicas: 1
+    labels: !override
+      - "traefik.enable=true"
+      - "traefik.http.services.api.loadbalancer.server.port=8080"
+      - "traefik.http.routers.api.rule=Host(`localhost`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.api.entrypoints=web"
+      - "traefik.http.middlewares.api-strip-prefix.stripprefix.prefixes=/api"
+      - "traefik.http.routers.api.middlewares=api-strip-prefix"
+    # volumes:
+    #   - ./Application:/Application
+    #   - nuget_cache:/root/.nuget/packages
+    #   - application_bin:/Application/bin
+    #   - application_obj:/Application/obj
+
+# volumes:
+#   nuget_cache:
+#   application_bin:
+#   application_obj:

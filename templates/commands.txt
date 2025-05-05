@@ -1,0 +1,5 @@
+docker build -f .\Application\Dockerfile.production -t api:latest .
+
+docker save api:latest -o api.tar
+
+scp .\api.tar deploy@valkata.example.com:/srv/application
