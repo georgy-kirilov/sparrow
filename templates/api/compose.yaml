@@ -4,6 +4,8 @@ services:
     restart: unless-stopped
     deploy:
       replicas: 2
+    environment:
+      - NAME=${NAME}
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.api.loadbalancer.server.port=8080"
