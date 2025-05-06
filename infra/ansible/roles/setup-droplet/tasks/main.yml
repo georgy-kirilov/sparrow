@@ -106,14 +106,6 @@
         group: deploy
         mode: '0755'
 
-    - name: Copy Docker Compose file to /srv/application
-      copy:
-        src: ../docker/compose.yaml
-        dest: /srv/application/compose.yaml
-        owner: deploy
-        group: deploy
-        mode: '0644'
-
     - name: Restart SSH to apply changes
       service:
         name: ssh

@@ -1,3 +1,5 @@
+name: application
+
 include:
   - api/compose.yaml
   - traefik/compose.yaml

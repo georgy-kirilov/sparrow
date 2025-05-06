@@ -146,19 +146,12 @@ jobs:
             exit 1
           fi
 
-      - name: Obtain TLS certificate
+      - name: Stop and remove the traefik/whoami container
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ steps.droplet_ip.outputs.ip }}
           username: deploy
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            FULL_DOMAIN='${{ steps.full_domain.outputs.value }}'
-            TLS_EMAIL='${{ secrets.TLS_EMAIL }}'
-
             sudo docker stop traefik-whoami  || true
             sudo docker rm   traefik-whoami  || true
-
-            cd /srv/application
-            sudo env FULL_DOMAIN="$FULL_DOMAIN" TLS_EMAIL="$TLS_EMAIL" \
-              docker compose -f compose.yaml up -d
